@@ -3,6 +3,7 @@ var platforms = [];
 var gravity = 0.004;
 var keyX = 0;
 var keyY = 0;
+var restartTimer = -1;
 
 function Ship(x, y, vx, vy) {
   this.direction = createVector(0, 0);
@@ -142,8 +143,14 @@ function Ship(x, y, vx, vy) {
 }
 var ship;
 
-function preload() {
+function restart() {
+  delete ship;
   ship = new Ship(20, 10, 0.2, 0);
+  restartTimer = -1;
+}
+
+function preload() {
+  restart();
 }
 
 function setup() {
@@ -218,6 +225,16 @@ function draw() {
   ship.draw();
   drawTerrain();
   drawStatus();
+
+  if (ship.hasLanded) {
+    if (restartTimer == -1) {
+      restartTimer = Date.now() + 1000;
+    } else {
+      if (restartTimer < Date.now()) {
+        restart();
+      }
+    }
+  }
 }
 
 function drawTerrain() {
