@@ -1,3 +1,8 @@
+/*
+  Jupiter Lander JS
+  jostein.topland@gmail.com
+*/
+
 var terrain = [];
 var platforms = [];
 var gravity = 0.004;
