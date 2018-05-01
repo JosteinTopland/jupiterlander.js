@@ -1,5 +1,8 @@
 var terrain = [];
+var platforms = [];
 var gravity = 0.004;
+var keyX = 0;
+var keyY = 0;
 
 function Ship(x, y, vx, vy) {
   this.direction = createVector(0, 0);
@@ -9,10 +12,13 @@ function Ship(x, y, vx, vy) {
   this.sound = {};
   this.fuel = 100;
   this.boundingPoly = [];
+  this.hasLanded = false;
 
   this.init = function() {
     this.sound["small"] = loadSound("thrust_small.ogg");
     this.sound["large"] = loadSound("thrust_large.ogg");
+    this.sound["win"] = loadSound("win.ogg");
+    this.sound["crash"] = loadSound("crash.ogg");
     this.sprite = loadImage("spritesheet.png");
     this.position = createVector(x, y);
     this.velocity = createVector(vx, vy);
@@ -51,6 +57,11 @@ function Ship(x, y, vx, vy) {
   this.init();
 
   this.move = function(x, y) {
+    if (this.hasLanded) {
+      x = 0;
+      y = 0;
+    }
+
     if (this.fuel <= 0) {
       x = 0;
       y = 0;
@@ -69,11 +80,36 @@ function Ship(x, y, vx, vy) {
   }
 
   this.update = function() {
+    if (this.hasLanded) return;
+
     this.velocity.y += gravity;
     this.velocity.add(this.direction.x, -this.direction.y);
     this.position.add(this.velocity);
     if (abs(this.direction.x) > 0 || this.direction.y > 0) {
       this.fuel = max(0, this.fuel - 0.2);
+    }
+
+    let shipShape = [];
+    for (let i = 0; i < this.boundingPoly.length; i++) {
+      shipShape.push(createVector(this.position.x + this.boundingPoly[i].x, this.position.y + this.boundingPoly[i].y));
+    }
+
+    if (collidePolyPoly(terrain, shipShape)) {
+      this.hasLanded = true;
+      this.sound['crash'].play();
+    }
+
+    for (let i = 0; i < platforms.length; i++) {
+      if (collidePolyPoly(platforms[i], shipShape)) {
+        this.hasLanded = true;
+        this.velocity.x = 0;
+        this.position.y = platforms[i][0].y - 21;
+        if (this.velocity.y > 0.145) {
+          this.sound['crash'].play();
+        } else {
+          this.sound['win'].play();
+        }
+      }
     }
   }
 
@@ -84,16 +120,22 @@ function Ship(x, y, vx, vy) {
     translate(this.position.x, this.position.y);
     image(this.sprite, 0, 0, 24, 24, 0, 0, 24, 24);
     if (this.direction.x > 0) {
+      push();
       translate(1, 4);
       triangle(0, 2, 2, 0, 2, 4);
+      pop();
     }
     if (this.direction.x < 0) {
+      push();
       translate(21, 4);
       triangle(0, 0, 0, 4, 2, 2);
+      pop();
     }
     if (this.direction.y > 0) {
+      push();
       translate(8, 18);
       triangle(0, 0, 8, 0, 4, 4);
+      pop();
     }
     pop();
   }
@@ -121,6 +163,8 @@ function setup() {
   terrain.push(createVector(66, 126));
   terrain.push(createVector(63, 129));
   terrain.push(createVector(63, 151));
+  terrain.push(createVector(63, 161));
+  terrain.push(createVector(111, 161));
   terrain.push(createVector(111, 151));
   terrain.push(createVector(117, 142));
   terrain.push(createVector(117, 136));
@@ -130,6 +174,8 @@ function setup() {
   terrain.push(createVector(108, 94));
   terrain.push(createVector(110, 89));
   terrain.push(createVector(150, 48));
+  terrain.push(createVector(150, 58));
+  terrain.push(createVector(200, 58));
   terrain.push(createVector(200, 48));
   terrain.push(createVector(233, 80));
   terrain.push(createVector(236, 90));
@@ -139,6 +185,8 @@ function setup() {
   terrain.push(createVector(233, 118));
   terrain.push(createVector(215, 137));
   terrain.push(createVector(215, 159));
+  terrain.push(createVector(215, 169));
+  terrain.push(createVector(255, 169));
   terrain.push(createVector(255, 159));
   terrain.push(createVector(260, 152));
   terrain.push(createVector(260, 144));
@@ -157,6 +205,10 @@ function setup() {
   terrain.push(createVector(304, 0));
   terrain.push(createVector(304, 184));
   terrain.push(createVector(0, 184));
+
+  platforms.push([ createVector(63, 151), createVector(63, 161), createVector(111, 161), createVector(111, 151) ]);
+  platforms.push([ createVector(150, 48), createVector(150, 58), createVector(200, 58), createVector(200, 48) ]);
+  platforms.push([ createVector(215, 159), createVector(215, 169), createVector(255, 169), createVector(255, 159) ]);
 }
 
 function draw() {
@@ -169,23 +221,20 @@ function draw() {
 }
 
 function drawTerrain() {
-  let shipShape = [];
-  for (let i = 0; i < ship.boundingPoly.length; i++) {
-    shipShape.push(createVector(ship.position.x + ship.boundingPoly[i].x, ship.position.y + ship.boundingPoly[i].y));
-  }
-
   noStroke();
   fill('darkred');
+
   beginShape();
-  for (let i = 0; i < terrain.length; i++)
+  for (let i = 0; i < terrain.length; i++) {
     vertex(terrain[i].x, terrain[i].y);
+  }
   endShape(CLOSE);
 
-  if (collidePolyPoly(terrain, shipShape)) {
-    fill('red');
+  for (let i = 0; i < platforms.length; i++) {
     beginShape();
-    for (let i = 0; i < shipShape.length; i++)
-      vertex(shipShape[i].x, shipShape[i].y);
+    for (let j = 0; j < platforms[i].length; j++) {
+      vertex(platforms[i][j].x, platforms[i][j].y);
+    }
     endShape(CLOSE);
   }
 }
@@ -225,19 +274,15 @@ function drawStatus() {
 }
 
 function keyPressed() {
-  switch (keyCode) {
-    case LEFT_ARROW:
-      ship.move(0.02, 0);
-      break;
-    case RIGHT_ARROW:
-      ship.move(-0.02, 0);
-      break;
-    case DOWN_ARROW:
-      ship.move(0, 0.02);
-      break;
-    }
+  if (keyCode == LEFT_ARROW) keyX = 0.02;
+  if (keyCode == RIGHT_ARROW) keyX = -0.02;
+  if (keyCode == DOWN_ARROW) keyY = 0.02;
+  ship.move(keyX, keyY);
 }
 
 function keyReleased() {
-  ship.move(0, 0);
+  if (keyCode == LEFT_ARROW) keyX = 0;
+  if (keyCode == RIGHT_ARROW) keyX = 0;
+  if (keyCode == DOWN_ARROW) keyY = 0;
+  ship.move(keyX, keyY);
 }
