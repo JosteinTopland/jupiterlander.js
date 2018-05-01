@@ -4,6 +4,7 @@ var gravity = 0.004;
 var keyX = 0;
 var keyY = 0;
 var restartTimer = -1;
+var music;
 
 function Ship(x, y, vx, vy) {
   this.direction = createVector(0, 0);
@@ -151,11 +152,14 @@ function restart() {
 
 function preload() {
   restart();
+   music = loadSound("autechre_deco-loc.ogg");
 }
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
   noSmooth();
+
+  music.loop();
 
   terrain.push(createVector(0, 0));
   terrain.push(createVector(7, 9));
